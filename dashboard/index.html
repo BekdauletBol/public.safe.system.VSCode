@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>public.safe</title>
+    <title>public.safe — Intelligence</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
@@ -12,34 +12,51 @@
         #stream { width: 100%; border-radius: 8px; border: 1px solid #333; }
         .header { width: 100%; max-width: 1200px; display: flex; justify-content: space-between; margin-bottom: 20px; color: #888; font-size: 12px; }
         .alert-active { border: 2px solid #ff3131 !important; box-shadow: 0 0 30px rgba(255,49,49,0.2); }
-        .stat-label { font-size: 10px; text-transform: uppercase; color: #555; }
-        .stat-value { font-size: 24px; font-weight: 600; margin-bottom: 10px; }
+        .stat-label { font-size: 10px; text-transform: uppercase; color: #555; margin-bottom: 5px; }
+        .stat-value { font-size: 24px; font-weight: 600; margin-bottom: 15px; }
+        button { background: #fff; color: #000; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 10px; }
+        .secondary-btn { background: transparent; color: #888; border: 1px solid #333; }
     </style>
 </head>
 <body>
     <div class="header">
-        <div>PUBLIC.SAFE / SESSION_01</div>
+        <div style="font-weight: 600; color: #fff;">public.safe // INTELLIGENCE</div>
         <div id="clock"></div>
     </div>
 
     <div class="grid">
         <div class="card" id="monitor-card">
-            <img id="stream" src="" alt="WAITING FOR CONTEXT...">
+            <img id="stream" src="" alt="AWAITING CONTEXT...">
         </div>
         
         <div class="card">
-            <div class="stat-label">System Health (Latency ms)</div>
+            <div class="stat-label">System Health (Intensity)</div>
             <canvas id="healthChart" height="150"></canvas>
             
-            <div style="margin-top: 30px;">
-                <div class="stat-label">In Zone</div>
+            <div style="margin-top: 25px;">
+                <div class="stat-label">Objects in Zone</div>
                 <div id="viol" class="stat-value" style="color:#ff3131">0</div>
                 
                 <div class="stat-label">CPU Load</div>
                 <div id="cpu" class="stat-value">0%</div>
             </div>
             
-            <button onclick="enableAudio()" id="audioBtn" style="background: #222; color: #fff; border: 1px solid #333; padding: 10px; width: 100%; border-radius: 8px; cursor: pointer;">Enable Audio Alerts</button>
+            <button onclick="toggleAudio()" id="audioBtn" class="secondary-btn">SOUND: OFF</button>
+        </div>
+    </div>
+
+    <div class="grid" style="margin-top: 40px; border-top: 1px solid #222; padding-top: 40px; width: 100%; max-width: 1200px;">
+        <div style="grid-column: span 2;">
+            <h2 style="letter-spacing: -1px; margin-bottom: 10px;">03_INTELLIGENCE_CENTER</h2>
+            <div style="display: flex; gap: 20px;">
+                <button style="width: auto; padding: 12px 30px;" onclick="generateReport()" id="genBtn">GENERATE ANALYTIC REPORT (.PNG)</button>
+                <a href="/api/download_csv" style="color:#888; text-decoration:none; border:1px solid #333; padding:12px 30px; border-radius:8px; font-size:14px; font-weight:600;">EXPORT RAW DATA (.CSV)</a>
+            </div>
+            <div id="reportPreview" style="display: none; margin-top: 30px; border: 1px solid #2d3139; padding: 20px; border-radius: 12px;">
+                <img id="finalImg" src="" style="width: 100%; border-radius: 8px;">
+                <br><br>
+                <a id="saveBtn" href="/api/download_report" download style="background:#fff; color:#000; padding:10px 20px; border-radius:5px; text-decoration:none; font-weight:600;">SAVE PNG REPORT</a>
+            </div>
         </div>
     </div>
 
@@ -47,42 +64,85 @@
         let audioEnabled = false;
         const alertSound = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
         
+        // ЧАСЫ
+        setInterval(() => { document.getElementById('clock').innerText = new Date().toISOString(); }, 1000);
+
+        // ИНИЦИАЛИЗАЦИЯ ГРАФИКА (ОДИН РАЗ)
         const ctx = document.getElementById('healthChart').getContext('2d');
         const healthChart = new Chart(ctx, {
             type: 'line',
-            data: { labels: [], datasets: [{ label: 'Latency', data: [], borderColor: '#fff', borderWidth: 1, fill: true, backgroundColor: 'rgba(255,255,255,0.05)' }] },
-            options: { scales: { y: { display: false }, x: { display: false } }, plugins: { legend: { display: false } }, animation: false }
+            data: { 
+                labels: Array(40).fill(""), 
+                datasets: [{ 
+                    label: 'Intensity',
+                    data: [], 
+                    borderColor: '#00ff41', 
+                    borderWidth: 2, 
+                    fill: true, 
+                    backgroundColor: 'rgba(0,255,65,0.05)', 
+                    pointRadius: 0,
+                    tension: 0.4
+                }] 
+            },
+            options: { 
+                scales: { 
+                    y: { display: true, min: 0, max: 400, grid: { color: '#1a1a1a' } }, 
+                    x: { display: false } 
+                }, 
+                plugins: { legend: { display: false } }, 
+                animation: false 
+            }
         });
 
+        // WEBSOCKET
         const ws = new WebSocket(`wss://${location.host}/ws/data`);
         ws.onmessage = (e) => {
             const data = JSON.parse(e.data);
-            const streamImg = document.getElementById('stream');
             
-            streamImg.src = "data:image/jpeg;base64," + data.img;
+            // Стрим и телеметрия
+            document.getElementById('stream').src = "data:image/jpeg;base64," + data.img;
             document.getElementById('cpu').innerText = data.cpu + "%";
             document.getElementById('viol').innerText = data.v;
             
-            // Звук и Визуальный алерт
+            // Алерт логика
+            const dataset = healthChart.data.datasets[0];
             if(data.v > 0) {
                 document.getElementById('monitor-card').classList.add('alert-active');
                 if(audioEnabled) alertSound.play();
+                dataset.borderColor = '#ff3131';
+                dataset.backgroundColor = 'rgba(255,49,49,0.1)';
             } else {
                 document.getElementById('monitor-card').classList.remove('alert-active');
+                dataset.borderColor = '#00ff41';
+                dataset.backgroundColor = 'rgba(0,255,65,0.05)';
             }
 
             // Обновление графика
-            healthChart.data.labels.push("");
-            healthChart.data.datasets[0].data.push(data.lat);
-            if(healthChart.data.labels.length > 50) {
-                healthChart.data.labels.shift();
-                healthChart.data.datasets[0].data.shift();
-            }
+            dataset.data.push(data.lat);
+            if (dataset.data.length > 40) dataset.data.shift();
             healthChart.update();
         };
 
-        function enableAudio() { audioEnabled = true; document.getElementById('audioBtn').innerText = "Audio Alerts Active"; }
-        setInterval(() => { document.getElementById('clock').innerText = new Date().toISOString(); }, 1000);
+        function toggleAudio() { 
+            audioEnabled = !audioEnabled; 
+            document.getElementById('audioBtn').innerText = audioEnabled ? "SOUND: ON" : "SOUND: OFF";
+            document.getElementById('audioBtn').style.borderColor = audioEnabled ? "#00ff41" : "#333";
+        }
+
+        async function generateReport() {
+            const btn = document.getElementById('genBtn');
+            btn.innerText = "COMPILING...";
+            const res = await fetch('/api/build_analytics');
+            const data = await res.json();
+            if(data.status === 'success') {
+                document.getElementById('reportPreview').style.display = 'block';
+                document.getElementById('finalImg').src = data.url + "?t=" + new Date().getTime();
+                btn.innerText = "GENERATE ANALYTIC REPORT (.PNG)";
+            } else {
+                alert("Wait a bit more for data collection");
+                btn.innerText = "GENERATE ANALYTIC REPORT (.PNG)";
+            }
+        }
     </script>
 </body>
 </html>
