@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>public.safe</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+        body { background: #0b0c0e; color: #fff; font-family: 'Inter', sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; width: 100%; max-width: 1200px; }
+        .card { background: #16181d; border: 1px solid #2d3139; border-radius: 12px; padding: 15px; position: relative; }
+        #stream { width: 100%; border-radius: 8px; border: 1px solid #333; }
+        .header { width: 100%; max-width: 1200px; display: flex; justify-content: space-between; margin-bottom: 20px; color: #888; font-size: 12px; }
+        .alert-active { border: 2px solid #ff3131 !important; box-shadow: 0 0 30px rgba(255,49,49,0.2); }
+        .stat-label { font-size: 10px; text-transform: uppercase; color: #555; }
+        .stat-value { font-size: 24px; font-weight: 600; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>PUBLIC.SAFE / SESSION_01</div>
+        <div id="clock"></div>
+    </div>
+
+    <div class="grid">
+        <div class="card" id="monitor-card">
+            <img id="stream" src="" alt="WAITING FOR CONTEXT...">
+        </div>
+        
+        <div class="card">
+            <div class="stat-label">System Health (Latency ms)</div>
+            <canvas id="healthChart" height="150"></canvas>
+            
+            <div style="margin-top: 30px;">
+                <div class="stat-label">In Zone</div>
+                <div id="viol" class="stat-value" style="color:#ff3131">0</div>
+                
+                <div class="stat-label">CPU Load</div>
+                <div id="cpu" class="stat-value">0%</div>
+            </div>
+            
+            <button onclick="enableAudio()" id="audioBtn" style="background: #222; color: #fff; border: 1px solid #333; padding: 10px; width: 100%; border-radius: 8px; cursor: pointer;">Enable Audio Alerts</button>
+        </div>
+    </div>
+
+    <script>
+        let audioEnabled = false;
+        const alertSound = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+        
+        const ctx = document.getElementById('healthChart').getContext('2d');
+        const healthChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Latency', data: [], borderColor: '#fff', borderWidth: 1, fill: true, backgroundColor: 'rgba(255,255,255,0.05)' }] },
+            options: { scales: { y: { display: false }, x: { display: false } }, plugins: { legend: { display: false } }, animation: false }
+        });
+
+        const ws = new WebSocket(`wss://${location.host}/ws/data`);
+        ws.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            const streamImg = document.getElementById('stream');
+            
+            streamImg.src = "data:image/jpeg;base64," + data.img;
+            document.getElementById('cpu').innerText = data.cpu + "%";
+            document.getElementById('viol').innerText = data.v;
+            
+            // Звук и Визуальный алерт
+            if(data.v > 0) {
+                document.getElementById('monitor-card').classList.add('alert-active');
+                if(audioEnabled) alertSound.play();
+            } else {
+                document.getElementById('monitor-card').classList.remove('alert-active');
+            }
+
+            // Обновление графика
+            healthChart.data.labels.push("");
+            healthChart.data.datasets[0].data.push(data.lat);
+            if(healthChart.data.labels.length > 50) {
+                healthChart.data.labels.shift();
+                healthChart.data.datasets[0].data.shift();
+            }
+            healthChart.update();
+        };
+
+        function enableAudio() { audioEnabled = true; document.getElementById('audioBtn').innerText = "Audio Alerts Active"; }
+        setInterval(() => { document.getElementById('clock').innerText = new Date().toISOString(); }, 1000);
+    </script>
+</body>
+</html>

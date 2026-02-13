@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head><title>EDGE NODE</title></head>
+<body style="background:#000; color:#fff; text-align:center; font-family:sans-serif;">
+    <video id="v" autoplay playsinline style="width:100%; max-width:400px; transform: scaleX(-1);"></video>
+    <h2 id="st">INITIALIZING CAMERA...</h2>
+    <canvas id="c" style="display:none"></canvas>
+    <script>
+        const ws = new WebSocket(`wss://${location.host}/ws/iphone-01`);
+        const v = document.getElementById('v');
+        const c = document.getElementById('c');
+        const ctx = c.getContext('2d');
+
+        navigator.mediaDevices.getUserMedia({video: {facingMode:"environment", width: 640, height: 480}})
+            .then(stream => {
+                v.srcObject = stream;
+                document.getElementById('st').innerText = "STREAMING ACTIVE";
+                setInterval(() => {
+                    if(ws.readyState === 1) {
+                        c.width = 640; c.height = 480;
+                        ctx.drawImage(v, 0, 0, 640, 480);
+                        c.toBlob(b => ws.send(b), 'image/jpeg', 0.6);
+                    }
+                }, 1000/25);
+            });
+    </script>
+</body>
+</html>
