@@ -1,148 +1,610 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <title>public.safe — Intelligence</title>
+    <title>public.safe</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
-        body { background: #0b0c0e; color: #fff; font-family: 'Inter', sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; width: 100%; max-width: 1200px; }
-        .card { background: #16181d; border: 1px solid #2d3139; border-radius: 12px; padding: 15px; position: relative; }
-        #stream { width: 100%; border-radius: 8px; border: 1px solid #333; }
-        .header { width: 100%; max-width: 1200px; display: flex; justify-content: space-between; margin-bottom: 20px; color: #888; font-size: 12px; }
-        .alert-active { border: 2px solid #ff3131 !important; box-shadow: 0 0 30px rgba(255,49,49,0.2); }
-        .stat-label { font-size: 10px; text-transform: uppercase; color: #555; margin-bottom: 5px; }
-        .stat-value { font-size: 24px; font-weight: 600; margin-bottom: 15px; }
-        button { background: #fff; color: #000; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 10px; }
-        .secondary-btn { background: transparent; color: #888; border: 1px solid #333; }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap"
+        rel="stylesheet">
+    <!-- <link rel="stylesheet" href="styles.css"> -->
 </head>
+<style>
+    *,
+    *::before,
+    *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    :root {
+        --bg: #080909;
+        --surface: #0f1011;
+        --border: rgba(255, 255, 255, 0.07);
+        --border-bright: rgba(255, 255, 255, 0.15);
+        --text: #e8e8e8;
+        --muted: #444;
+        --dim: #2a2a2a;
+        --accent: #c8ff00;
+        --danger: #ff3131;
+        --mono: 'DM Mono', monospace;
+        --display: 'Syne', sans-serif;
+    }
+
+    html,
+    body {
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 13px;
+        line-height: 1.5;
+        overflow-x: hidden;
+    }
+
+    /* ── LAYOUT ── */
+    .shell {
+        display: grid;
+        grid-template-rows: 48px 1fr auto;
+        min-height: 100vh;
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 0 28px;
+    }
+
+    /* ── TOP BAR ── */
+    .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        color: var(--text);
+    }
+
+    .logo span {
+        color: var(--muted);
+        font-weight: 400;
+    }
+
+    .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+    }
+
+    .badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+        text-transform: uppercase;
+    }
+
+    .dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--accent);
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+        0%,
+        100% {
+            opacity: 1
+        }
+
+        50% {
+            opacity: .3
+        }
+    }
+
+    #clock {
+        font-size: 11px;
+        color: var(--muted);
+        font-family: var(--mono);
+        letter-spacing: 0.05em;
+    }
+
+    /* ── MAIN CONTENT ── */
+    .content {
+        display: grid;
+        grid-template-columns: 1fr 280px;
+        gap: 1px;
+        background: var(--border);
+        margin-top: 0;
+    }
+
+    /* ── PANELS ── */
+    .panel {
+        background: var(--bg);
+        padding: 24px;
+    }
+
+    /* ── VIDEO FEED ── */
+    .feed-panel {
+        position: relative;
+        padding: 0;
+        overflow: hidden;
+        min-height: 480px;
+        display: flex;
+        align-items: stretch;
+    }
+
+    #stream {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        filter: grayscale(20%);
+        transition: filter 0.3s;
+    }
+
+    .feed-overlay {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+    }
+
+    /* corner brackets */
+    .feed-overlay::before,
+    .feed-overlay::after {
+        content: '';
+        position: absolute;
+        width: 24px;
+        height: 24px;
+        border-color: var(--accent);
+        border-style: solid;
+        opacity: 0.7;
+    }
+
+    .feed-overlay::before {
+        top: 16px;
+        left: 16px;
+        border-width: 1px 0 0 1px;
+    }
+
+    .feed-overlay::after {
+        bottom: 16px;
+        right: 16px;
+        border-width: 0 1px 1px 0;
+    }
+
+    .feed-label {
+        position: absolute;
+        bottom: 16px;
+        left: 16px;
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        color: rgba(200, 255, 0, 0.7);
+        text-transform: uppercase;
+    }
+
+    .feed-status {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        font-size: 10px;
+        color: var(--muted);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .feed-status .dot {
+        background: var(--accent);
+    }
+
+    /* ALERT STATE */
+    .feed-panel.alert-active #stream {
+        filter: grayscale(0%) sepia(30%) hue-rotate(-10deg);
+    }
+
+    .feed-panel.alert-active .feed-overlay::before,
+    .feed-panel.alert-active .feed-overlay::after {
+        border-color: var(--danger);
+        opacity: 1;
+    }
+
+    .feed-panel.alert-active .feed-label {
+        color: var(--danger);
+    }
+
+    .feed-panel.alert-active .feed-status .dot {
+        background: var(--danger);
+        animation: none;
+        opacity: 1;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        background: var(--border);
+    }
+
+    .sidebar>* {
+        background: var(--bg);
+    }
+
+    .metric-block {
+        padding: 20px 24px;
+    }
+
+    .metric-label {
+        font-size: 9px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 6px;
+    }
+
+    .metric-value {
+        font-family: var(--display);
+        font-size: 36px;
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: -0.02em;
+    }
+
+    .metric-value.danger {
+        color: var(--danger);
+    }
+
+    .metric-value.normal {
+        color: var(--text);
+    }
+
+    .chart-block {
+        padding: 20px 24px;
+        flex: 1;
+    }
+
+    canvas {
+        width: 100% !important;
+    }
+
+    .audio-btn {
+        margin: 0;
+        padding: 16px 24px;
+        background: transparent;
+        border: none;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        transition: color 0.2s;
+    }
+
+    .audio-btn:hover {
+        color: var(--text);
+    }
+
+    .audio-btn.active {
+        color: var(--accent);
+    }
+
+    .audio-btn .toggle-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        flex-shrink: 0;
+    }
+
+    /* ── FOOTER / ACTIONS ── */
+    .actions-bar {
+        border-top: 1px solid var(--border);
+        padding: 20px 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .section-label {
+        font-family: var(--display);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-right: 8px;
+    }
+
+    .btn-primary {
+        padding: 10px 20px;
+        background: var(--accent);
+        color: #000;
+        border: none;
+        border-radius: 4px;
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn-primary:hover {
+        opacity: 0.85;
+    }
+
+    .btn-primary:active {
+        transform: scale(0.98);
+    }
+
+    .btn-secondary {
+        padding: 10px 20px;
+        background: transparent;
+        color: var(--muted);
+        border: 1px solid var(--dim);
+        border-radius: 4px;
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: color 0.2s, border-color 0.2s;
+    }
+
+    .btn-secondary:hover {
+        color: var(--text);
+        border-color: var(--border-bright);
+    }
+
+    /* ── REPORT PREVIEW ── */
+    #reportPreview {
+        display: none;
+        margin-top: 20px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+    #reportPreview img {
+        width: 100%;
+        display: block;
+    }
+
+    .report-footer {
+        padding: 14px 16px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .report-footer span {
+        font-size: 10px;
+        color: var(--muted);
+        letter-spacing: 0.06em;
+    }
+
+    /* ── AWAITING STATE ── */
+    .feed-panel .awaiting {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        color: var(--dim);
+    }
+
+    .feed-panel .awaiting span {
+        font-size: 10px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+    }
+</style>
+
 <body>
-    <div class="header">
-        <div style="font-weight: 600; color: #fff;">public.safe // INTELLIGENCE</div>
-        <div id="clock"></div>
-    </div>
+    <div class="shell">
 
-    <div class="grid">
-        <div class="card" id="monitor-card">
-            <img id="stream" src="" alt="AWAITING CONTEXT...">
-        </div>
-        
-        <div class="card">
-            <div class="stat-label">System Health (Intensity)</div>
-            <canvas id="healthChart" height="150"></canvas>
-            
-            <div style="margin-top: 25px;">
-                <div class="stat-label">Objects in Zone</div>
-                <div id="viol" class="stat-value" style="color:#ff3131">0</div>
-                
-                <div class="stat-label">CPU Load</div>
-                <div id="cpu" class="stat-value">0%</div>
+        <!-- TOP BAR -->
+        <header class="topbar">
+            <div class="logo">public.safe <span>// intelligence</span></div>
+            <div class="topbar-right">
+                <div class="badge">
+                    <div class="dot"></div> live
+                </div>
+                <div id="clock">—</div>
             </div>
-            
-            <button onclick="toggleAudio()" id="audioBtn" class="secondary-btn">SOUND: OFF</button>
-        </div>
-    </div>
+        </header>
 
-    <div class="grid" style="margin-top: 40px; border-top: 1px solid #222; padding-top: 40px; width: 100%; max-width: 1200px;">
-        <div style="grid-column: span 2;">
-            <h2 style="letter-spacing: -1px; margin-bottom: 10px;">03_INTELLIGENCE_CENTER</h2>
-            <div style="display: flex; gap: 20px;">
-                <button style="width: auto; padding: 12px 30px;" onclick="generateReport()" id="genBtn">GENERATE ANALYTIC REPORT (.PNG)</button>
-                <a href="/api/download_csv" style="color:#888; text-decoration:none; border:1px solid #333; padding:12px 30px; border-radius:8px; font-size:14px; font-weight:600;">EXPORT RAW DATA (.CSV)</a>
+        <!-- MAIN GRID -->
+        <main class="content">
+
+            <!-- FEED -->
+            <div class="panel feed-panel" id="monitor-card">
+                <img id="stream" src="" alt="">
+                <div class="awaiting"><span>awaiting context</span></div>
+                <div class="feed-overlay"></div>
+                <div class="feed-label">CAM_01 / ZONE_A</div>
+                <div class="feed-status">
+                    <div class="dot"></div> recording
+                </div>
             </div>
-            <div id="reportPreview" style="display: none; margin-top: 30px; border: 1px solid #2d3139; padding: 20px; border-radius: 12px;">
-                <img id="finalImg" src="" style="width: 100%; border-radius: 8px;">
-                <br><br>
-                <a id="saveBtn" href="/api/download_report" download style="background:#fff; color:#000; padding:10px 20px; border-radius:5px; text-decoration:none; font-weight:600;">SAVE PNG REPORT</a>
+
+            <!-- SIDEBAR -->
+            <div class="sidebar">
+
+                <div class="chart-block">
+                    <div class="metric-label">Intensity</div>
+                    <canvas id="healthChart" height="100"></canvas>
+                </div>
+
+                <div class="metric-block">
+                    <div class="metric-label">Objects in zone</div>
+                    <div id="viol" class="metric-value danger">0</div>
+                </div>
+
+                <div class="metric-block">
+                    <div class="metric-label">CPU load</div>
+                    <div id="cpu" class="metric-value normal">0%</div>
+                </div>
+
+                <button class="audio-btn" id="audioBtn" onclick="toggleAudio()">
+                    <div class="toggle-dot"></div>
+                    <span>Sound: off</span>
+                </button>
             </div>
-        </div>
+
+        </main>
+
+        <!-- ACTIONS -->
+        <footer>
+            <div class="actions-bar">
+                <span class="section-label">Intelligence</span>
+                <button class="btn-primary" onclick="generateReport()" id="genBtn">Generate report (.png)</button>
+                <a href="/api/download_csv" class="btn-secondary">Export raw (.csv)</a>
+            </div>
+
+            <div id="reportPreview">
+                <img id="finalImg" src="" alt="Report">
+                <div class="report-footer">
+                    <span id="reportTs">—</span>
+                    <a id="saveBtn" href="/api/download_report" download class="btn-primary"
+                        style="text-decoration:none;">Save .png</a>
+                </div>
+            </div>
+        </footer>
+
     </div>
 
     <script>
         let audioEnabled = false;
         const alertSound = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-        
-        // ЧАСЫ
-        setInterval(() => { document.getElementById('clock').innerText = new Date().toISOString(); }, 1000);
 
-        // ИНИЦИАЛИЗАЦИЯ ГРАФИКА (ОДИН РАЗ)
+        // ── CLOCK ──
+        setInterval(() => {
+            document.getElementById('clock').innerText =
+                new Date().toISOString().replace('T', ' ').slice(0, 19);
+        }, 1000);
+
+        // ── CHART ──
         const ctx = document.getElementById('healthChart').getContext('2d');
         const healthChart = new Chart(ctx, {
             type: 'line',
-            data: { 
-                labels: Array(40).fill(""), 
-                datasets: [{ 
+            data: {
+                labels: Array(40).fill(""),
+                datasets: [{
                     label: 'Intensity',
-                    data: [], 
-                    borderColor: '#00ff41', 
-                    borderWidth: 2, 
-                    fill: true, 
-                    backgroundColor: 'rgba(0,255,65,0.05)', 
+                    data: [],
+                    borderColor: 'rgba(200,255,0,0.8)',
+                    borderWidth: 1.5,
+                    fill: true,
+                    backgroundColor: 'rgba(200,255,0,0.04)',
                     pointRadius: 0,
                     tension: 0.4
-                }] 
+                }]
             },
-            options: { 
-                scales: { 
-                    y: { display: true, min: 0, max: 400, grid: { color: '#1a1a1a' } }, 
-                    x: { display: false } 
-                }, 
-                plugins: { legend: { display: false } }, 
-                animation: false 
+            options: {
+                scales: {
+                    y: {
+                        display: true,
+                        min: 0, max: 400,
+                        grid: { color: 'rgba(255,255,255,0.04)' },
+                        ticks: { color: '#333', font: { size: 9, family: 'DM Mono' } }
+                    },
+                    x: { display: false }
+                },
+                plugins: { legend: { display: false } },
+                animation: false
             }
         });
 
-        // WEBSOCKET
+        // ── WEBSOCKET ──
         const ws = new WebSocket(`wss://${location.host}/ws/data`);
         ws.onmessage = (e) => {
             const data = JSON.parse(e.data);
-            
-            // Стрим и телеметрия
-            document.getElementById('stream').src = "data:image/jpeg;base64," + data.img;
+            const streamEl = document.getElementById('stream');
+            const awaiting = document.querySelector('.awaiting');
+
+            streamEl.src = "data:image/jpeg;base64," + data.img;
+            if (awaiting) awaiting.style.display = 'none';
+
             document.getElementById('cpu').innerText = data.cpu + "%";
             document.getElementById('viol').innerText = data.v;
-            
-            // Алерт логика
+
             const dataset = healthChart.data.datasets[0];
-            if(data.v > 0) {
+            if (data.v > 0) {
                 document.getElementById('monitor-card').classList.add('alert-active');
-                if(audioEnabled) alertSound.play();
-                dataset.borderColor = '#ff3131';
-                dataset.backgroundColor = 'rgba(255,49,49,0.1)';
+                if (audioEnabled) alertSound.play();
+                dataset.borderColor = 'rgba(255,49,49,0.9)';
+                dataset.backgroundColor = 'rgba(255,49,49,0.05)';
             } else {
                 document.getElementById('monitor-card').classList.remove('alert-active');
-                dataset.borderColor = '#00ff41';
-                dataset.backgroundColor = 'rgba(0,255,65,0.05)';
+                dataset.borderColor = 'rgba(200,255,0,0.8)';
+                dataset.backgroundColor = 'rgba(200,255,0,0.04)';
             }
 
-            // Обновление графика
             dataset.data.push(data.lat);
             if (dataset.data.length > 40) dataset.data.shift();
             healthChart.update();
         };
 
-        function toggleAudio() { 
-            audioEnabled = !audioEnabled; 
-            document.getElementById('audioBtn').innerText = audioEnabled ? "SOUND: ON" : "SOUND: OFF";
-            document.getElementById('audioBtn').style.borderColor = audioEnabled ? "#00ff41" : "#333";
+        // ── AUDIO TOGGLE ──
+        function toggleAudio() {
+            audioEnabled = !audioEnabled;
+            const btn = document.getElementById('audioBtn');
+            btn.querySelector('span').innerText = audioEnabled ? "Sound: on" : "Sound: off";
+            btn.classList.toggle('active', audioEnabled);
         }
 
+        // ── GENERATE REPORT ──
         async function generateReport() {
             const btn = document.getElementById('genBtn');
-            btn.innerText = "COMPILING...";
+            btn.innerText = "Compiling...";
+            btn.disabled = true;
+
             const res = await fetch('/api/build_analytics');
             const data = await res.json();
-            if(data.status === 'success') {
-                document.getElementById('reportPreview').style.display = 'block';
-                document.getElementById('finalImg').src = data.url + "?t=" + new Date().getTime();
-                btn.innerText = "GENERATE ANALYTIC REPORT (.PNG)";
+
+            if (data.status === 'success') {
+                const preview = document.getElementById('reportPreview');
+                preview.style.display = 'block';
+                document.getElementById('finalImg').src = data.url + "?t=" + Date.now();
+                document.getElementById('reportTs').innerText =
+                    new Date().toISOString().replace('T', ' ').slice(0, 19);
+                btn.innerText = "Regenerate report (.png)";
             } else {
                 alert("Wait a bit more for data collection");
-                btn.innerText = "GENERATE ANALYTIC REPORT (.PNG)";
+                btn.innerText = "Generate report (.png)";
             }
+
+            btn.disabled = false;
         }
     </script>
 </body>
+
 </html>

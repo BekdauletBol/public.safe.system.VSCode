@@ -1,28 +1,153 @@
 <!DOCTYPE html>
-<html>
-<head><title>EDGE NODE</title></head>
-<body style="background:#000; color:#fff; text-align:center; font-family:sans-serif;">
-    <video id="v" autoplay playsinline style="width:100%; max-width:400px; transform: scaleX(-1);"></video>
-    <h2 id="st">INITIALIZING CAMERA...</h2>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EDGE NODE</title>
+    <style>
+        /* Базовые стили страницы */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0f172a;
+            /* Глубокий темный сине-серый цвет */
+            color: #e2e8f0;
+            font-family: 'ui-monospace', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+            /* Моноширинный "кодерский" шрифт */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        /* Контейнер для интерфейса */
+        .node-container {
+            background: #1e293b;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid #334155;
+            text-align: center;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        /* Заголовок над видео */
+        .header-title {
+            font-size: 0.85rem;
+            letter-spacing: 3px;
+            color: #64748b;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* Стилизация видео-потока */
+        #v {
+            width: 100%;
+            border-radius: 8px;
+            background: #000;
+            transform: scaleX(-1);
+            /* Зеркальное отображение сохранено */
+            border: 2px solid #3b82f6;
+            /* Синяя рамка */
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+            /* Легкое свечение */
+            display: block;
+        }
+
+        /* Статусная строка */
+        #st {
+            margin-top: 20px;
+            margin-bottom: 0;
+            font-size: 0.9rem;
+            font-weight: normal;
+            color: #10b981;
+            /* Изумрудный цвет для успешного статуса */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Пульсирующая точка перед текстом статуса (сделана через CSS, чтобы не ломать ваш JS) */
+        #st::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: #10b981;
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 8px #10b981;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.4;
+                transform: scale(0.8);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Подвал с копирайтом */
+        .footer-brand {
+            margin-top: 40px;
+            font-size: 0.75rem;
+            color: #475569;
+            letter-spacing: 1px;
+            text-transform: lowercase;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="node-container">
+        <div class="header-title">Edge Camera Node</div>
+
+        <!-- Логические элементы остались без изменений -->
+        <video id="v" autoplay playsinline></video>
+        <h2 id="st">INITIALIZING CAMERA...</h2>
+    </div>
+
+    <div class="footer-brand">made by public.</div>
+
+    <!-- Скрытый канвас -->
     <canvas id="c" style="display:none"></canvas>
+
     <script>
+        // JS ЛОГИКА ОСТАЛАСЬ БЕЗ ИЗМЕНЕНИЙ
         const ws = new WebSocket(`wss://${location.host}/ws/iphone-01`);
         const v = document.getElementById('v');
         const c = document.getElementById('c');
         const ctx = c.getContext('2d');
 
-        navigator.mediaDevices.getUserMedia({video: {facingMode:"environment", width: 640, height: 480}})
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 640, height: 480 } })
             .then(stream => {
                 v.srcObject = stream;
                 document.getElementById('st').innerText = "STREAMING ACTIVE";
                 setInterval(() => {
-                    if(ws.readyState === 1) {
+                    if (ws.readyState === 1) {
                         c.width = 640; c.height = 480;
                         ctx.drawImage(v, 0, 0, 640, 480);
                         c.toBlob(b => ws.send(b), 'image/jpeg', 0.6);
                     }
-                }, 1000/25);
+                }, 1000 / 25);
             });
     </script>
 </body>
+
 </html>

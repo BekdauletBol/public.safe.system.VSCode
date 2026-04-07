@@ -1,0 +1,31 @@
+# Version control
+.git
+.gitignore
+
+# Python caches
+__pycache__
+**/__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Local data and generated analysis outputs (created at runtime inside the container)
+data/
+analysis/
+
+# SSL certificates — mount these at runtime, never bake into image
+cert.pem
+key.pem
+
+# IDE / editor metadata
+.DS_Store
+.vscode
+*.code-workspace
+
+# Docs & other non-runtime files
+README.md
+dashboard/README.md
+
+# Analysis scripts — only needed for offline research, not by the server
+analysis/
