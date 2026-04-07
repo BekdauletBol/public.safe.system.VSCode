@@ -41,7 +41,10 @@ with open(CONFIG_FILE, "r") as f: CONFIG = json.load(f)
 DANGER_ZONE = np.array(CONFIG["danger_zone"], dtype=np.int32)
 
 def ml_worker():
-    model = YOLO('yolov8n.pt'); model.to('mps')
+    import torch
+    model = YOLO('yolov8n.pt')
+    device = 'mps' if torch.backends.mps.is_available() else ('cuda' if torch.cuda.is_available() else 'cpu')
+    model.to(device)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     
