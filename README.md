@@ -105,7 +105,7 @@ public.safe.system.VSCode/
 
 ```bash
 python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+source venv/bin/activate        
 pip install -r requirements.txt
 python server/main.py
 ```
@@ -117,4 +117,9 @@ python server/main.py
 ```bash
 docker-compose down
 docker-compose up -d --build
+
+ipconfig getifaddr en0
+
+uvicorn server.main:app --host 0.0.0.0 --port 8000 --ssl-keyfile key.pem --ssl-certfile cert.pem
+
 ```
